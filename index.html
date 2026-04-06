@@ -3,132 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>천하제일 낚시대회</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    
     <style>
-        :root {
-            --primary-color: #0066cc;
-            --bg-color: #f4f7f6;
-            --box-bg: #ffffff;
-            --kakao-color: #FEE500;
-        }
-        body {
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0; padding: 0; color: #333;
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-        }
-        
-        /* 헤더 */
-        header {
-            background-color: var(--primary-color); color: white;
-            text-align: center; padding: 1rem 0; font-size: 1.2rem;
-            font-weight: bold; position: sticky; top: 0; z-index: 10;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .hamburger-btn {
-            position: absolute; left: 15px; background: none; border: none;
-            color: white; font-size: 1.5rem; cursor: pointer; padding: 5px;
-        }
+        :root { --primary-color: #0066cc; --bg-color: #f4f7f6; --box-bg: #ffffff; --kakao-color: #FEE500; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; color: #333; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        header { background-color: var(--primary-color); color: white; text-align: center; padding: 1rem 0; font-size: 1.2rem; font-weight: bold; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: center; }
+        .hamburger-btn { position: absolute; left: 15px; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 5px; }
         .header-title { cursor: pointer; }
-
-        /* 플로팅 뒤로가기 버튼 (우측 하단) */
-        .fab-back {
-            position: fixed; bottom: 25px; right: 25px;
-            width: 55px; height: 55px; border-radius: 50%;
-            background-color: var(--primary-color); color: white;
-            border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            font-size: 1.8rem; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; z-index: 1000; display: none; /* 기본 숨김 */
-        }
-        .fab-back:active { transform: scale(0.95); }
-
-        /* 사이드 메뉴 */
-        .sidebar-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); z-index: 99;
-            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
-        }
-        .sidebar-overlay.open { opacity: 1; visibility: visible; }
+        .fab-back { position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; border-radius: 50%; background-color: var(--primary-color); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 1.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 1000; display: none; }
         
-        .sidebar {
-            position: fixed; top: 0; left: -100%; height: 100%;
-            width: 70%; background: white; z-index: 100; transition: left 0.3s ease;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column;
-        }
+        /* 사이드 메뉴 */
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; }
+        .sidebar-overlay.open { opacity: 1; visibility: visible; }
+        .sidebar { position: fixed; top: 0; left: -100%; height: 100%; width: 70%; background: white; z-index: 100; transition: left 0.3s ease; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
         .sidebar.open { left: 0; }
         @media (min-width: 768px) { .sidebar { width: 250px; } }
-
         .sidebar-header { background: var(--primary-color); color: white; padding: 20px; font-size: 1.2rem; font-weight: bold; padding-top: 30px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; }
         .sidebar-menu li { border-bottom: 1px solid #eee; }
         .sidebar-menu a { display: block; padding: 18px 20px; color: #333; text-decoration: none; font-weight: bold; font-size: 1.05rem; cursor: pointer; }
-        .sidebar-menu a:hover { background-color: #f4f7f6; color: var(--primary-color); }
-        .sidebar-menu hr { border: 0; height: 5px; background: #eee; margin: 0; }
 
-        /* 컨테이너 및 뷰 전환 */
-        .container { max-width: 600px; margin: 0 auto; padding: 15px; display: none; padding-bottom: 80px; /* FAB 버튼 가림 방지 */ }
+        /* 컨테이너 */
+        .container { max-width: 600px; margin: 0 auto; padding: 15px; display: none; padding-bottom: 80px; }
         .view-section { display: none; animation: fadeIn 0.3s ease; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* 서브 페이지 헤더 */
-        .sub-header { margin-bottom: 20px; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
-        .sub-header h2 { margin: 0; font-size: 1.2rem; border: none; padding: 0; color: var(--primary-color); }
-
-        /* 로그인 화면 */
-        #login-screen { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: white; padding: 20px; text-align: center; }
-        .login-title { font-size: 1.8rem; color: var(--primary-color); font-weight: bold; margin-bottom: 40px; }
-        .login-desc { color:#666; margin-bottom: 30px; }
-        .social-btn { width: 100%; max-width: 320px; padding: 15px; margin-bottom: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
-        .btn-kakao { background-color: var(--kakao-color); color: #3c1e1e; }
-        
-        /* 공통 카드 & 프로필 설정 */
         .card { background-color: var(--box-bg); border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        h2 { font-size: 1.1rem; margin-top: 0; border-bottom: 2px solid var(--bg-color); padding-bottom: 10px; display: flex; justify-content: space-between; }
         
-        .profile-info { font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; }
-        .profile-info span.value { font-weight: bold; color: var(--primary-color); margin-left: 10px; }
-        .edit-badge { background: #f4f7f6; border: 1px solid #ccc; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; cursor: pointer; margin-left: 10px; font-weight: normal; color: #333; }
-        .logout-btn { background-color: #ff4d4d; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        /* 로그인 */
+        #login-screen { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; padding: 20px; text-align: center; }
+        .login-title { font-size: 1.8rem; color: var(--primary-color); font-weight: bold; margin-bottom: 40px; }
+        .social-btn { width: 100%; max-width: 320px; padding: 15px; margin-bottom: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; background-color: var(--kakao-color); }
 
-        /* 내 조업정보 대시보드 */
-        .my-dashboard { display: flex; gap: 10px; margin-bottom: 20px; }
-        .dash-box { flex: 1; background: #f4f7f6; padding: 20px; border-radius: 12px; text-align: center; }
-        .dash-title { font-size: 0.9rem; color: #666; margin-bottom: 5px; }
-        .dash-value { font-size: 1.8rem; font-weight: bold; color: var(--primary-color); }
-
-        /* 고객센터/상품 리스트 */
-        .contact-link { display: block; background: #f4f7f6; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-decoration: none; color: #333; font-weight: bold; font-size: 1.1rem; }
-        .prize-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
-        .prize-item:last-child { border: none; }
-        .prize-rank { font-size: 1.5rem; font-weight: bold; color: #ff9900; width: 50px; }
-
-        /* 오늘의 낚시왕 & 사진 업로드 */
-        .king-section { margin-bottom: 20px; }
-        .king-title { font-size: 1rem; font-weight: bold; color: #ff9900; margin-bottom: 10px; }
-        .king-display { width: 100%; height: 250px; background-color: #eee; border-radius: 12px; overflow: hidden; touch-action: pan-y; position: relative; }
+        /* 킹 슬라이더 */
+        .king-display { width: 100%; height: 250px; background-color: #eee; border-radius: 12px; overflow: hidden; position: relative; }
         .carousel-track { display: flex; height: 100%; width: 100%; transition: transform 0.4s ease-in-out; }
         .carousel-track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; }
-        .empty-king { color: #888; text-align: center; font-size: 0.9rem; line-height: 1.5; width: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .upload-area { border: 2px dashed #b3c6ff; border-radius: 10px; background-color: #f9fbff; padding: 20px; }
-        .upload-title { text-align: center; color: var(--primary-color); font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; }
-        .upload-buttons { display: flex; flex-direction: column; gap: 10px; }
-        .upload-btn-large { background: white; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 18px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
-        input[type="file"] { display: none; }
-        #preview-container { display: none; text-align: center; width: 100%; box-sizing: border-box; }
-        #preview-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 10px; background-color: #eee; }
-        .submit-btn { background-color: var(--primary-color); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        
+        /* 업로드 */
+        .upload-area { border: 2px dashed #b3c6ff; border-radius: 10px; background-color: #f9fbff; padding: 20px; text-align: center; }
+        .upload-btn-large { background: white; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
+        #preview-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; margin-bottom: 15px; display: none; }
 
-        /* 랭킹 및 갤러리 */
+        /* 랭킹 리스트 */
         .leaderboard-list { list-style: none; padding: 0; margin: 0; }
-        .leaderboard-list li { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; cursor: pointer;}
-        .rank { font-weight: bold; display: inline-block; width: 25px; color: var(--primary-color); }
+        .leaderboard-list li { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
+        .rank { font-weight: bold; color: var(--primary-color); width: 30px; display: inline-block; }
+        
+        /* 프로필 닉네임 수정 */
+        .profile-info { margin-bottom: 15px; font-size: 1.1rem; }
+        .edit-badge { background: #eee; border: none; padding: 4px 8px; border-radius: 5px; font-size: 0.8rem; cursor: pointer; margin-left: 10px; }
+        
+        /* 갤러리 */
         .gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .gallery-grid img { width: 100%; height: 150px; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; }
+        .gallery-grid img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -149,8 +81,8 @@
 
     <div id="login-screen">
         <div class="login-title">🎣<br>천하제일 낚시대회</div>
-        <p class="login-desc">당신의 조과를 기록하고 명예를 얻으세요!</p>
-        <button class="social-btn btn-kakao" onclick="mockLogin()">🟡 카카오톡으로 3초만에 시작하기</button>
+        <p>새로고침해도 데이터가 유지되는 서버 연동 버전</p>
+        <button class="social-btn" onclick="mockLogin()">🟡 카카오톡으로 시작하기</button>
     </div>
 
     <div id="main-app" style="display:none;">
@@ -160,370 +92,242 @@
         </header>
 
         <div class="container" style="display:block;">
-            
             <div id="view-home" class="view-section active">
-                <p id="welcome-msg" style="font-weight: bold; color: var(--primary-color); margin-bottom: 20px;"></p>
-                
+                <p id="welcome-msg" style="font-weight:bold; color:var(--primary-color);"></p>
                 <div class="card">
-                    <div class="king-section">
-                        <div class="king-title" id="king-title">👑 오늘의 낚시왕: 대기 중...</div>
-                        <div class="king-display" id="king-display">
-                            <div class="carousel-track" id="carousel-track">
-                                <div class="empty-king">아직 등록된 조과가 없습니다.<br>오늘의 첫 번째 주인공이 되어보세요!</div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="king-title" id="king-title">👑 오늘의 낚시왕: 로딩 중...</div>
+                    <div class="king-display"><div class="carousel-track" id="carousel-track"></div></div>
                     <div class="upload-area" id="uploadArea">
-                        <div class="upload-title">➕ 사진 첨부</div>
-                        <div class="upload-buttons">
-                            <button type="button" class="upload-btn-large" onclick="document.getElementById('cameraInput').click()">📸 현장에서 바로 촬영</button>
-                            <button type="button" class="upload-btn-large" onclick="document.getElementById('galleryInput').click()">🖼️ 갤러리에서 선택</button>
-                        </div>
+                        <button class="upload-btn-large" onclick="document.getElementById('cameraInput').click()">📸 현장 촬영</button>
+                        <button class="upload-btn-large" onclick="document.getElementById('galleryInput').click()">🖼️ 갤러리 선택</button>
                     </div>
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment">
-                    <input type="file" id="galleryInput" accept="image/*">
-                    <form id="uploadForm">
-                        <div id="preview-container">
-                            <img id="preview-img" src="">
-                            <button type="submit" class="submit-btn">이 사진으로 등록하기</button>
-                        </div>
-                    </form>
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+                    <input type="file" id="galleryInput" accept="image/*" style="display:none">
+                    <div id="preview-container" style="display:none; text-align:center;">
+                        <img id="preview-img" src="">
+                        <button class="upload-btn-large" style="background:var(--primary-color); color:white;" onclick="uploadCatch()">서버에 조과 등록</button>
+                    </div>
                 </div>
-
                 <div class="card">
-                    <h2>🏆 주간 랭킹 (마리 수)</h2>
+                    <h2>🏆 주간 랭킹 (실시간)</h2>
                     <ul class="leaderboard-list" id="leaderboard"></ul>
                 </div>
             </div>
 
             <div id="view-profile" class="view-section">
-                <div class="sub-header">
-                    <h2>내 개인정보 설정</h2>
-                </div>
                 <div class="card">
-                    <div class="profile-info">아이디: <span class="value" id="profile-id"></span></div>
-                    <div class="profile-info">
-                        닉네임: <span class="value" id="profile-nickname"></span>
-                        <button class="edit-badge" onclick="editNickname()">✏️ 수정</button>
-                    </div>
-                    <button class="logout-btn" onclick="logout()">로그아웃</button>
+                    <h2>내 개인정보</h2>
+                    <div class="profile-info">닉네임: <span id="p-nick" style="font-weight:bold;"></span> <button class="edit-badge" onclick="editNickname()">수정</button></div>
+                    <div class="profile-info">고유ID: <span id="p-id" style="color:#888; font-size:0.9rem;"></span></div>
+                    <button onclick="logout()" style="width:100%; padding:12px; background:#ff4d4d; color:white; border:none; border-radius:8px; font-weight:bold;">로그아웃</button>
                 </div>
             </div>
 
             <div id="view-record" class="view-section">
-                <div class="sub-header">
-                    <h2>내 조업 정보 & 순위</h2>
-                </div>
-                <div class="my-dashboard">
-                    <div class="dash-box">
-                        <div class="dash-title">나의 주간 순위</div>
-                        <div class="dash-value" id="my-rank">--위</div>
-                    </div>
-                    <div class="dash-box">
-                        <div class="dash-title">총 조업(마리 수)</div>
-                        <div class="dash-value" id="my-count">0마리</div>
-                    </div>
-                </div>
                 <div class="card">
-                    <h2>📸 나의 낚시 기록 (갤러리)</h2>
+                    <h2>내 조업 통계</h2>
+                    <p>총 잡은 마리 수: <span id="my-total-count" style="font-weight:bold; color:var(--primary-color);">0</span>마리</p>
                     <div class="gallery-grid" id="my-gallery"></div>
                 </div>
             </div>
 
             <div id="view-prize" class="view-section">
-                <div class="sub-header">
-                    <h2>대회 상품 안내</h2>
-                </div>
-                <div class="card" style="padding:0;">
-                    <div class="prize-item">
-                        <div class="prize-rank">1위</div>
-                        <div>
-                            <strong style="font-size:1.1rem;">최고급 바다낚시 세트</strong><br>
-                            <span style="color:#666; font-size:0.9rem;">(릴 + 낚시대 + 태클박스)</span>
-                        </div>
-                    </div>
-                    <div class="prize-item">
-                        <div class="prize-rank">2위</div>
-                        <div>
-                            <strong style="font-size:1.1rem;">수산물 밀키트 패키지</strong><br>
-                            <span style="color:#666; font-size:0.9rem;">(우럭, 광어, 매운탕 재료)</span>
-                        </div>
-                    </div>
-                    <div class="prize-item">
-                        <div class="prize-rank">3위</div>
-                        <div>
-                            <strong style="font-size:1.1rem;">스타벅스 기프티콘 5만원권</strong>
-                        </div>
-                    </div>
-                </div>
+                <div class="card"><h2>🎁 대회 상품</h2><p>1등: 바다낚시 풀세트<br>2등: 수산물 밀키트<br>3등: 상품권 5만원</p></div>
             </div>
 
             <div id="view-support" class="view-section">
-                <div class="sub-header">
-                    <h2>고객센터 문의</h2>
-                </div>
-                <div class="card">
-                    <p style="margin-top:0; color:#666; line-height:1.5;">앱 사용 중 불편한 점이나 어뷰징 신고, 데이터 관련 문의는 아래로 연락해 주세요.</p>
-                    <a href="tel:010-4664-0814" class="contact-link">📞 대표전화: 010-4664-0814</a>
-                    <a href="mailto:hyunseo1458@gmail.com" class="contact-link">✉️ 메일: hyunseo1458@gmail.com</a>
-                </div>
+                <div class="card"><h2>🎧 고객센터</h2><p>📞 010-4664-0814<br>✉️ hyunseo1458@gmail.com</p></div>
             </div>
-
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="galleryModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle" style="margin: 0;"></h3>
-                <button class="close-btn" id="closeModalBtn" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="gallery-grid" id="modalGallery"></div>
         </div>
     </div>
 
     <script>
-        let currentUser = null;
-        let userId = null;
-        let userData = {}; 
-        let tempImgURL = null;
-        let carouselTimer = null;
-        let currentSlideIndex = 0;
-        let startX = 0, endX = 0;
+        // 1. Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8WUGKc3RfT1xgHGzgCJfeIhI-mGK9lpI",
+            authDomain: "sea-cast-fishing.firebaseapp.com",
+            projectId: "sea-cast-fishing",
+            storageBucket: "sea-cast-fishing.firebasestorage.app",
+            messagingSenderId: "729674215433",
+            appId: "1:729674215433:web:c937264195a184233688d8",
+            measurementId: "G-JXYJQSBKCB"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        const els = {
-            loginScreen: document.getElementById('login-screen'),
-            mainApp: document.getElementById('main-app'),
-            welcomeMsg: document.getElementById('welcome-msg'),
-            sidebar: document.getElementById('sidebar'),
-            sidebarOverlay: document.getElementById('sidebarOverlay'),
-            sidebarUser: document.getElementById('sidebarUser'),
-            carouselTrack: document.getElementById('carousel-track'),
-            kingTitle: document.getElementById('king-title'),
-            leaderboard: document.getElementById('leaderboard'),
-            fabBack: document.getElementById('fabBack')
+        let currentUser = null;
+        let tempImgData = null;
+        let carouselTimer = null;
+
+        // 2. 로그인 로직 (새로고침 유지 포함)
+        window.onload = function() {
+            const savedUser = localStorage.getItem('fish_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                enterApp();
+            }
         };
 
-        // --- 헤더 홈 이동 & 관리자 모드 로직 ---
-        let clickCount = 0;
-        function handleHeaderClick() {
-            changeView('home'); // 항상 메인으로 먼저 이동
-            
-            // 관리자 모드 카운트
-            clickCount++;
-            if (clickCount === 5) {
-                alert("🔒 [관리자 모드 활성화]\n콘솔(F12)을 확인하거나 데이터를 다운로드하세요.");
-                console.log("=== 📊 천하제일 낚시대회 MVP 관리자 데이터 ===");
-                console.log(userData);
-                clickCount = 0;
-            }
-            setTimeout(() => { clickCount = 0; }, 3000); 
-        }
-
-        // --- 화면 전환 로직 ---
-        function toggleMenu() {
-            els.sidebar.classList.toggle('open');
-            els.sidebarOverlay.classList.toggle('open');
-        }
-
-        function changeView(viewId) {
-            document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-            document.getElementById(`view-${viewId}`).classList.add('active');
-            
-            els.sidebar.classList.remove('open');
-            els.sidebarOverlay.classList.remove('open');
-
-            // FAB(뒤로가기) 노출 로직 (홈에서는 숨기고, 서브메뉴에선 보이기)
-            if(viewId === 'home') {
-                els.fabBack.style.display = 'none';
-            } else {
-                els.fabBack.style.display = 'flex';
-            }
-
-            if (viewId === 'record') renderMyRecord();
-        }
-
-        // --- 로그인 & 로그아웃 ---
         function mockLogin() {
-            const randomNum = Math.floor(Math.random() * 999);
-            currentUser = `씨케스트조사${randomNum}`; 
-            userId = `user_${randomNum}`; 
+            const randomID = 'id_' + Math.floor(Math.random() * 10000);
+            currentUser = { id: randomID, nick: "씨케스트조사_" + randomID.split('_')[1] };
+            localStorage.setItem('fish_user', JSON.stringify(currentUser));
+            enterApp();
+        }
 
-            if(!userData[currentUser]) userData[currentUser] = { count: 0, images: [] };
-            
-            els.loginScreen.style.display = 'none';
-            els.mainApp.style.display = 'block';
-            
-            updateProfileUI();
-            updateDashboard();
+        function enterApp() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            updateUI();
+            listenToRankings(); // 실시간 랭킹 리스너 시작
+            listenToKing();     // 오늘의 낚시왕 리스너 시작
         }
 
         function logout() {
-            currentUser = null;
-            els.mainApp.style.display = 'none';
-            els.loginScreen.style.display = 'flex';
-            changeView('home');
+            localStorage.removeItem('fish_user');
+            location.reload();
         }
 
-        // --- 닉네임 변경 로직 ---
-        function editNickname() {
-            const newName = prompt("새로운 닉네임을 입력하세요:", currentUser);
-            if (newName && newName.trim() !== "" && newName !== currentUser) {
-                const oldName = currentUser;
-                currentUser = newName.trim();
-                
-                // 데이터베이스 이전 (기존 기록 새 이름으로 넘기기)
-                userData[currentUser] = userData[oldName];
-                delete userData[oldName];
-                
-                updateProfileUI();
-                updateDashboard(); // 랭킹 보드 새로고침
-                alert(`닉네임이 '${currentUser}'(으)로 변경되었습니다.`);
-            }
-        }
+        // 3. 서버 연동 핵심 (조과 등록)
+        async function uploadCatch() {
+            if (!tempImgData) return;
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerText = "서버 저장 중...";
 
-        function updateProfileUI() {
-            document.getElementById('profile-id').textContent = userId;
-            document.getElementById('profile-nickname').textContent = currentUser;
-            els.welcomeMsg.textContent = `환영합니다, ${currentUser}님!`;
-            els.sidebarUser.textContent = `${currentUser}님`; 
-        }
-
-        // --- 사진 업로드 ---
-        document.getElementById('cameraInput').addEventListener('change', handleFileSelect);
-        document.getElementById('galleryInput').addEventListener('change', handleFileSelect);
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            tempImgURL = URL.createObjectURL(file);
-            document.getElementById('preview-img').src = tempImgURL;
-            document.getElementById('uploadArea').style.display = 'none';
-            document.getElementById('preview-container').style.display = 'block';
-        }
-
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            userData[currentUser].count += 1;
-            userData[currentUser].images.unshift(tempImgURL); 
-            alert(`조과가 등록되었습니다!\n(현재 ${userData[currentUser].count}마리)`);
-            document.getElementById('preview-container').style.display = 'none';
-            document.getElementById('uploadArea').style.display = 'flex'; 
-            tempImgURL = null;
-            updateDashboard();
-        });
-
-        // --- 홈 대시보드 및 랭킹 ---
-        function updateDashboard() {
-            renderLeaderboard();
-            renderFishingKing();
-        }
-
-        function renderFishingKing() {
-            if(carouselTimer) clearInterval(carouselTimer);
-            currentSlideIndex = 0; 
-            const activeUsers = Object.keys(userData).filter(name => userData[name].count > 0);
-            const sortedUsers = activeUsers.sort((a, b) => userData[b].count - userData[a].count);
-
-            if (sortedUsers.length === 0) return;
-            const topUser = sortedUsers[0];
-            const images = userData[topUser].images;
-
-            els.kingTitle.textContent = `👑 오늘의 낚시왕: ${topUser} (${userData[topUser].count}마리)`;
-            els.carouselTrack.innerHTML = ''; 
-            els.carouselTrack.style.transform = `translateX(0%)`;
-
-            images.forEach(src => {
-                const img = document.createElement('img');
-                img.src = src;
-                els.carouselTrack.appendChild(img);
-            });
-
-            if (images.length > 1) startAutoSlide(images.length);
-        }
-
-        function updateCarouselPosition() {
-            els.carouselTrack.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
-        }
-
-        function startAutoSlide(total) {
-            if(carouselTimer) clearInterval(carouselTimer);
-            carouselTimer = setInterval(() => {
-                currentSlideIndex = (currentSlideIndex + 1) % total;
-                updateCarouselPosition();
-            }, 5000);
-        }
-
-        els.carouselTrack.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; clearInterval(carouselTimer); }, {passive: true});
-        els.carouselTrack.addEventListener('touchend', (e) => { endX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
-        
-        function handleSwipe() {
-            const threshold = 50; 
-            const count = els.carouselTrack.children.length;
-            if (count <= 1) return;
-            if (startX - endX > threshold) currentSlideIndex = (currentSlideIndex + 1) % count;
-            else if (endX - startX > threshold) currentSlideIndex = (currentSlideIndex - 1 + count) % count;
-            updateCarouselPosition();
-            startAutoSlide(count); 
-        }
-
-        function renderLeaderboard() {
-            els.leaderboard.innerHTML = '';
-            const activeUsers = Object.keys(userData).filter(name => userData[name].count > 0);
-            const sortedUsers = activeUsers.sort((a, b) => userData[b].count - userData[a].count);
-            
-            sortedUsers.slice(0, 5).forEach((name, index) => {
-                const li = document.createElement('li');
-                li.onclick = () => openUserGallery(name);
-                li.innerHTML = `<div><span class="rank">${index + 1}</span> ${name}</div><div class="score">${userData[name].count} <span>마리</span></div>`;
-                els.leaderboard.appendChild(li);
-            });
-            for (let i = sortedUsers.length; i < 5; i++) {
-                const li = document.createElement('li');
-                li.innerHTML = `<div><span class="rank" style="color:#ccc;">${i + 1}</span> ---</div><div class="score" style="color:#aaa;">0 <span>마리</span></div>`;
-                els.leaderboard.appendChild(li);
-            }
-        }
-
-        // --- 내 조업 정보 화면 ---
-        function renderMyRecord() {
-            const myData = userData[currentUser];
-            document.getElementById('my-count').textContent = `${myData.count}마리`;
-
-            const activeUsers = Object.keys(userData).filter(name => userData[name].count > 0);
-            const sortedUsers = activeUsers.sort((a, b) => userData[b].count - userData[a].count);
-            const myRankIndex = sortedUsers.indexOf(currentUser);
-            
-            document.getElementById('my-rank').textContent = myRankIndex !== -1 ? `${myRankIndex + 1}위` : `--위`;
-
-            const myGallery = document.getElementById('my-gallery');
-            myGallery.innerHTML = '';
-            if (myData.images.length === 0) {
-                myGallery.innerHTML = '<div style="grid-column:span 2; text-align:center; color:#888; padding:20px 0;">등록된 사진이 없습니다.</div>';
-            } else {
-                myData.images.forEach(src => {
-                    const img = document.createElement('img');
-                    img.src = src;
-                    myGallery.appendChild(img);
+            try {
+                await db.collection("catches").add({
+                    userId: currentUser.id,
+                    userNick: currentUser.nick,
+                    img: tempImgData,
+                    time: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                alert("성공! 서버에 기록되었습니다.");
+                document.getElementById('preview-container').style.display = 'none';
+                document.getElementById('uploadArea').style.display = 'block';
+                tempImgData = null;
+            } catch (e) {
+                alert("저장 실패: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "서버에 조과 등록";
             }
         }
 
-        // --- 갤러리 모달 ---
-        function openUserGallery(name) {
-            document.getElementById('modalTitle').textContent = `${name}님의 조과 (${userData[name].count}마리)`;
-            const modalGallery = document.getElementById('modalGallery');
-            modalGallery.innerHTML = '';
-            userData[name].images.forEach(imgSrc => {
-                const img = document.createElement('img');
-                img.src = imgSrc;
-                modalGallery.appendChild(img);
+        // 4. 실시간 데이터 리스너 (랭킹)
+        function listenToRankings() {
+            db.collection("catches").onSnapshot(snapshot => {
+                const userMap = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    userMap[data.userNick] = (userMap[data.userNick] || 0) + 1;
+                });
+
+                const sorted = Object.entries(userMap).sort((a, b) => b[1] - a[1]);
+                const list = document.getElementById('leaderboard');
+                list.innerHTML = "";
+                sorted.slice(0, 5).forEach((item, i) => {
+                    list.innerHTML += `<li><div><span class="rank">${i+1}</span> ${item[0]}</div><div style="font-weight:bold;">${item[1]}마리</div></li>`;
+                });
+                
+                // 내 기록 업데이트
+                const myCount = userMap[currentUser.nick] || 0;
+                document.getElementById('my-total-count').innerText = myCount;
             });
-            document.getElementById('galleryModal').style.display = 'flex';
         }
 
-        function closeModal() { document.getElementById('galleryModal').style.display = 'none'; }
+        // 5. 오늘의 낚시왕 (가장 많이 잡은 사람의 사진들)
+        function listenToKing() {
+            db.collection("catches").onSnapshot(snapshot => {
+                const userMap = {};
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if(!userMap[d.userNick]) userMap[d.userNick] = {count:0, imgs:[]};
+                    userMap[d.userNick].count++;
+                    userMap[d.userNick].imgs.push(d.img);
+                });
+
+                const sorted = Object.entries(userMap).sort((a,b) => b[1].count - a[1].count);
+                if(sorted.length > 0) {
+                    const king = sorted[0];
+                    document.getElementById('king-title').innerText = `👑 오늘의 낚시왕: ${king[0]} (${king[1].count}마리)`;
+                    renderCarousel(king[1].imgs);
+                }
+            });
+        }
+
+        function renderCarousel(imgs) {
+            const track = document.getElementById('carousel-track');
+            track.innerHTML = "";
+            imgs.forEach(src => track.innerHTML += `<img src="${src}">`);
+            startAutoSlide(imgs.length);
+        }
+
+        function startAutoSlide(len) {
+            if(carouselTimer) clearInterval(carouselTimer);
+            let idx = 0;
+            carouselTimer = setInterval(() => {
+                idx = (idx + 1) % len;
+                document.getElementById('carousel-track').style.transform = `translateX(-${idx * 100}%)`;
+            }, 4000);
+        }
+
+        // 6. UI 조작
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+
+        function changeView(view) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            document.getElementById('fabBack').style.display = (view === 'home') ? 'none' : 'flex';
+            toggleMenu();
+            if(view === 'record') renderMyGallery();
+        }
+
+        async function renderMyGallery() {
+            const grid = document.getElementById('my-gallery');
+            grid.innerHTML = "로딩 중...";
+            const snap = await db.collection("catches").where("userId", "==", currentUser.id).get();
+            grid.innerHTML = "";
+            snap.forEach(doc => grid.innerHTML += `<img src="${doc.data().img}">`);
+        }
+
+        function updateUI() {
+            document.getElementById('welcome-msg').innerText = `안녕하세요, ${currentUser.nick}님!`;
+            document.getElementById('sidebarUser').innerText = currentUser.nick + "님";
+            document.getElementById('p-nick').innerText = currentUser.nick;
+            document.getElementById('p-id').innerText = currentUser.id;
+        }
+
+        function editNickname() {
+            const n = prompt("변경할 닉네임:", currentUser.nick);
+            if(n) {
+                currentUser.nick = n;
+                localStorage.setItem('fish_user', JSON.stringify(currentUser));
+                updateUI();
+                alert("닉네임이 변경되었습니다. (기존 기록은 이전 닉네임으로 유지될 수 있습니다)");
+            }
+        }
+
+        function handleHeaderClick() { changeView('home'); }
+
+        // 사진 파일 처리
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    tempImgData = ev.target.result;
+                    document.getElementById('preview-img').src = tempImgData;
+                    document.getElementById('preview-img').style.display = 'block';
+                    document.getElementById('uploadArea').style.display = 'none';
+                    document.getElementById('preview-container').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            });
+        });
     </script>
 </body>
 </html>
