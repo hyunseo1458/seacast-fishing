@@ -1,333 +1,294 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>천하제일 낚시대회</title>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sea Cast - 해커톤 데모용 프로토타입</title>
+<style>
+    :root {
+        --primary-color: #0055ff;
+        --bg-color: #f0f4f8;
+        --text-color: #222;
+        --card-bg: #ffffff;
+    }
+    body, html { margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); height: 100%; }
     
-    <style>
-        :root { --primary-color: #0066cc; --bg-color: #f4f7f6; --box-bg: #ffffff; --kakao-color: #FEE500; }
-        body { font-family: 'Pretendard', -apple-system, sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; color: #333; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
-        header { background-color: var(--primary-color); color: white; text-align: center; padding: 1rem 0; font-size: 1.2rem; font-weight: bold; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: center; }
-        .hamburger-btn { position: absolute; left: 15px; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 5px; }
-        .header-title { cursor: pointer; }
-        .fab-back { position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; border-radius: 50%; background-color: var(--primary-color); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 1.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 1000; display: none; }
-        
-        /* 사이드 메뉴 */
-        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; }
-        .sidebar-overlay.open { opacity: 1; visibility: visible; }
-        .sidebar { position: fixed; top: 0; left: -100%; height: 100%; width: 70%; background: white; z-index: 100; transition: left 0.3s ease; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .sidebar.open { left: 0; }
-        @media (min-width: 768px) { .sidebar { width: 250px; } }
-        .sidebar-header { background: var(--primary-color); color: white; padding: 20px; font-size: 1.2rem; font-weight: bold; padding-top: 30px; }
-        .sidebar-menu { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; }
-        .sidebar-menu li { border-bottom: 1px solid #eee; }
-        .sidebar-menu a { display: block; padding: 18px 20px; color: #333; text-decoration: none; font-weight: bold; font-size: 1.05rem; cursor: pointer; }
+    /* App Container (모바일 화면) */
+    .app-container {
+        max-width: 480px; margin: 0 auto; background: var(--bg-color); height: 100vh;
+        display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        position: relative; overflow: hidden;
+    }
 
-        /* 컨테이너 */
-        .container { max-width: 600px; margin: 0 auto; padding: 15px; display: none; padding-bottom: 80px; }
-        .view-section { display: none; animation: fadeIn 0.3s ease; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background-color: var(--box-bg); border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        
-        /* 로그인 */
-        #login-screen { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; padding: 20px; text-align: center; }
-        .login-title { font-size: 1.8rem; color: var(--primary-color); font-weight: bold; margin-bottom: 40px; }
-        .social-btn { width: 100%; max-width: 320px; padding: 15px; margin-bottom: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; background-color: var(--kakao-color); }
+    /* Header */
+    header { background: var(--card-bg); color: var(--text-color); padding: 15px 20px; font-size: 1.2rem; font-weight: 800; text-align: center; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .header-icon { font-size: 1.2rem; cursor: pointer; }
 
-        /* 킹 슬라이더 */
-        .king-display { width: 100%; height: 250px; background-color: #eee; border-radius: 12px; overflow: hidden; position: relative; }
-        .carousel-track { display: flex; height: 100%; width: 100%; transition: transform 0.4s ease-in-out; }
-        .carousel-track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; }
-        
-        /* 업로드 */
-        .upload-area { border: 2px dashed #b3c6ff; border-radius: 10px; background-color: #f9fbff; padding: 20px; text-align: center; }
-        .upload-btn-large { background: white; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
-        #preview-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; margin-bottom: 15px; display: none; }
+    /* Content Area */
+    .content-area { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+    .page { display: none; animation: fadeIn 0.3s; padding: 15px; }
+    .page.active { display: block; }
 
-        /* 랭킹 리스트 */
-        .leaderboard-list { list-style: none; padding: 0; margin: 0; }
-        .leaderboard-list li { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
-        .rank { font-weight: bold; color: var(--primary-color); width: 30px; display: inline-block; }
-        
-        /* 프로필 닉네임 수정 */
-        .profile-info { margin-bottom: 15px; font-size: 1.1rem; }
-        .edit-badge { background: #eee; border: none; padding: 4px 8px; border-radius: 5px; font-size: 0.8rem; cursor: pointer; margin-left: 10px; }
-        
-        /* 갤러리 */
-        .gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .gallery-grid img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
-    </style>
+    /* UI Elements */
+    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+    h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700; color: #111; display: flex; align-items: center; gap: 8px; }
+    .btn { display: inline-block; background: var(--primary-color); color: white; border: none; padding: 12px 15px; border-radius: 10px; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; font-weight: 700; font-size: 0.95rem; transition: 0.2s; }
+    .btn:active { transform: scale(0.98); }
+    
+    /* Home Specific Elements */
+    .ad-banner { background: linear-gradient(135deg, #ff7eb3 0%, #ff758c 100%); color: white; border-radius: 12px; padding: 25px 15px; text-align: center; font-weight: bold; margin-bottom: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(255,117,140,0.3); }
+    
+    .forecast-info { background: #f8fbff; border-radius: 10px; padding: 15px; border: 1px solid #e1ecf4; }
+    .forecast-info strong { color: var(--primary-color); font-size: 1.2rem; }
+    
+    .post-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+    .post-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .post-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .post-meta { font-size: 0.8rem; color: #888; }
+    
+    .rank-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .rank-item:last-child { border-bottom: none; }
+    .rank-num { font-size: 1.2rem; font-weight: 800; width: 30px; color: #ccc; }
+    .rank-num.top1 { color: #ffd700; }
+    .rank-num.top2 { color: #c0c0c0; }
+    .rank-num.top3 { color: #cd7f32; }
+    .rank-info { flex: 1; }
+    .rank-score { font-weight: 700; color: var(--primary-color); }
+
+    /* Map Specific Elements */
+    select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; margin-bottom: 15px; background: white; outline: none; }
+    .map-placeholder { background: #dceaf5; height: 280px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #666; margin-bottom: 15px; position: relative; overflow: hidden; }
+    .heatmap { position: absolute; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,50,50,0.7) 0%, rgba(255,200,50,0.4) 50%, transparent 100%); top: 60px; left: 100px; }
+    .gear-info { background: #fffdf5; border: 1px solid #ffe8a1; padding: 15px; border-radius: 10px; font-size: 0.9rem; line-height: 1.5; }
+
+    /* Bottom Navigation */
+    .bottom-nav { position: absolute; bottom: 0; width: 100%; background: var(--card-bg); border-top: 1px solid #eee; display: flex; justify-content: space-around; padding: 12px 0; padding-bottom: max(12px, env(safe-area-inset-bottom)); z-index: 10; box-shadow: 0 -2px 10px rgba(0,0,0,0.02); }
+    .nav-item { text-align: center; font-size: 0.75rem; color: #aaa; cursor: pointer; flex: 1; font-weight: 600; }
+    .nav-item.active { color: var(--primary-color); }
+    .nav-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; filter: grayscale(100%); opacity: 0.6; }
+    .nav-item.active .nav-icon { filter: none; opacity: 1; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+</style>
 </head>
 <body>
 
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
-    <nav class="sidebar" id="sidebar">
-        <div class="sidebar-header" id="sidebarUser">로그인 해주세요</div>
-        <ul class="sidebar-menu">
-            <li><a onclick="changeView('profile')">👤 내 개인정보 설정</a></li>
-            <li><a onclick="changeView('record')">🐟 내 조업 정보 & 주간 순위</a></li>
-            <hr>
-            <li><a onclick="changeView('prize')">🎁 대회 상품 안내</a></li>
-            <li><a onclick="changeView('support')">🎧 고객센터 문의</a></li>
-        </ul>
-    </nav>
+<div class="app-container">
+    <header>
+        <span class="header-icon">⚙️</span>
+        <span id="header-title">Sea Cast</span>
+        <span class="header-icon">🔔</span>
+    </header>
 
-    <button class="fab-back" id="fabBack" onclick="changeView('home')">↩</button>
+    <div class="content-area">
+        <div id="home" class="page active">
+            
+            <div class="ad-banner" onclick="alert('광고 상세 페이지로 이동합니다.')">
+                🎣 다이와/시마노 릴 봄시즌 한정 30% 특가전<br>
+                <span style="font-size: 0.8rem; font-weight: normal; opacity: 0.9;">기간한정 쿠폰 다운받기 ></span>
+            </div>
 
-    <div id="login-screen">
-        <div class="login-title">🎣<br>천하제일 낚시대회</div>
-        <p>새로고침해도 데이터가 유지되는 서버 연동 버전</p>
-        <button class="social-btn" onclick="mockLogin()">🟡 카카오톡으로 시작하기</button>
-    </div>
+            <div class="card">
+                <h3>🌊 오늘의 베스트 조업 예측</h3>
+                <div class="forecast-info">
+                    <p style="margin:0 0 10px 0; color:#666;">추천 스팟: <strong>태안 청산리 인근</strong></p>
+                    <p style="margin:0; font-size:0.9rem;">
+                        🌡️ 수온: 15.2도 (상승세)<br>
+                        🌬️ 풍속: 3m/s (잔잔함)<br>
+                        📈 타겟 어종: <strong>우럭, 광어</strong> 활성도 매우 높음
+                    </p>
+                </div>
+                <button class="btn" style="margin-top:12px; background-color:#e8f0fe; color:var(--primary-color);" onclick="switchTab('map')">예측 지도에서 확인하기</button>
+            </div>
 
-    <div id="main-app" style="display:none;">
-        <header>
-            <button class="hamburger-btn" onclick="toggleMenu()">☰</button>
-            <span class="header-title" onclick="handleHeaderClick()">🎣 천하제일 낚시대회</span>
-        </header>
-
-        <div class="container" style="display:block;">
-            <div id="view-home" class="view-section active">
-                <p id="welcome-msg" style="font-weight:bold; color:var(--primary-color);"></p>
-                <div class="card">
-                    <div class="king-title" id="king-title">👑 오늘의 낚시왕: 로딩 중...</div>
-                    <div class="king-display"><div class="carousel-track" id="carousel-track"></div></div>
-                    <div class="upload-area" id="uploadArea">
-                        <button class="upload-btn-large" onclick="document.getElementById('cameraInput').click()">📸 현장 촬영</button>
-                        <button class="upload-btn-large" onclick="document.getElementById('galleryInput').click()">🖼️ 갤러리 선택</button>
-                    </div>
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
-                    <input type="file" id="galleryInput" accept="image/*" style="display:none">
-                    <div id="preview-container" style="display:none; text-align:center;">
-                        <img id="preview-img" src="">
-                        <button class="upload-btn-large" style="background:var(--primary-color); color:white;" onclick="uploadCatch()">서버에 조과 등록</button>
+            <div class="card">
+                <h3>🔥 커뮤니티 인기 글</h3>
+                <div class="post-item">
+                    <div>
+                        <div class="post-title">청산리 포인트 짬낚시 대박 쳤습니다.</div>
+                        <div class="post-meta">방금 전 · 👁️ 342 · 💬 12</div>
                     </div>
                 </div>
-                <div class="card">
-                    <h2>🏆 주간 랭킹 (실시간)</h2>
-                    <ul class="leaderboard-list" id="leaderboard"></ul>
+                <div class="post-item">
+                    <div>
+                        <div class="post-title">루어대 초보인데 장비 추천 좀 부탁드려요</div>
+                        <div class="post-meta">2시간 전 · 👁️ 156 · 💬 8</div>
+                    </div>
+                </div>
+                <div class="post-item">
+                    <div>
+                        <div class="post-title">천하제일 낚시대회 1등 경품 실화인가요?</div>
+                        <div class="post-meta">5시간 전 · 👁️ 512 · 💬 30</div>
+                    </div>
                 </div>
             </div>
 
-            <div id="view-profile" class="view-section">
-                <div class="card">
-                    <h2>내 개인정보</h2>
-                    <div class="profile-info">닉네임: <span id="p-nick" style="font-weight:bold;"></span> <button class="edit-badge" onclick="editNickname()">수정</button></div>
-                    <div class="profile-info">고유ID: <span id="p-id" style="color:#888; font-size:0.9rem;"></span></div>
-                    <button onclick="logout()" style="width:100%; padding:12px; background:#ff4d4d; color:white; border:none; border-radius:8px; font-weight:bold;">로그아웃</button>
+            <div class="card">
+                <h3>👑 주간 낚시 랭킹</h3>
+                <div class="rank-item">
+                    <span class="rank-num top1">1</span>
+                    <div class="rank-info">
+                        <div style="font-weight:700;">도시어부길라잡이</div>
+                        <div style="font-size:0.8rem; color:#666;">태안 / 5월 2주차 1위 방어중</div>
+                    </div>
+                    <span class="rank-score">광어 82cm</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-num top2">2</span>
+                    <div class="rank-info">
+                        <div style="font-weight:700;">루어마스터</div>
+                        <div style="font-size:0.8rem; color:#666;">포항</div>
+                    </div>
+                    <span class="rank-score">참돔 75cm</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-num top3">3</span>
+                    <div class="rank-info">
+                        <div style="font-weight:700;">초보조사탈출</div>
+                        <div style="font-size:0.8rem; color:#666;">인천</div>
+                    </div>
+                    <span class="rank-score">우럭 51cm</span>
                 </div>
             </div>
+        </div>
 
-            <div id="view-record" class="view-section">
-                <div class="card">
-                    <h2>내 조업 통계</h2>
-                    <p>총 잡은 마리 수: <span id="my-total-count" style="font-weight:bold; color:var(--primary-color);">0</span>마리</p>
-                    <div class="gallery-grid" id="my-gallery"></div>
+        <div id="map" class="page">
+            <select id="fish-select">
+                <option value="default">타겟 어종을 선택하세요</option>
+                <option value="flounder">광어 (Flatfish)</option>
+                <option value="red_seabream">참돔 (Red Seabream)</option>
+                <option value="squid">무늬오징어 (Bigfin Reef Squid)</option>
+            </select>
+            
+            <div class="map-placeholder">
+                <div class="heatmap" id="heatmap-layer" style="display:none;"></div>
+                <span>지도 API 연동 영역 (태안 청산리 중심)</span>
+                <div style="position:absolute; top:40%; left:50%; font-size:2rem;">📍</div>
+            </div>
+
+            <div class="card" id="gear-card" style="display:none;">
+                <h3>🎣 <span id="gear-fish-name">어종</span> 추천 채비</h3>
+                <div class="gear-info" id="gear-description">
+                    </div>
+            </div>
+        </div>
+
+        <div id="contents" class="page">
+            <div class="card">
+                <h3>🏆 천하제일 낚시대회</h3>
+                <p>상태: <strong style="color:var(--primary-color);">모집중</strong> (2026.04.10 ~ 04.25)</p>
+                <button class="btn" style="margin-bottom:10px;">대회 참가 신청하기</button>
+                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                <h4>📸 조과 계측 업로드</h4>
+                <p style="font-size:0.8rem; color:#666;">EXIF(위치, 시간) 메타데이터가 자동 추출되어 전송됩니다.</p>
+                <input type="file" accept="image/*" style="width:100%; margin-bottom:10px;">
+                <button class="btn" style="background-color:#333;">관리자 서버로 전송</button>
+            </div>
+        </div>
+
+        <div id="marina" class="page">
+            <div class="map-placeholder" style="height:200px;">
+                <span>전국 마리나 위치 매핑</span>
+            </div>
+            <div class="card">
+                <h3>⚓ 전곡 마리나</h3>
+                <p>현재 정박 가능한 자리: <strong>3석</strong></p>
+                <p>연락처: 031-123-4567</p>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn" style="background:#4caf50;">전화 연결</button>
+                    <button class="btn">온라인 예약</button>
                 </div>
             </div>
+        </div>
 
-            <div id="view-prize" class="view-section">
-                <div class="card"><h2>🎁 대회 상품</h2><p>1등: 바다낚시 풀세트<br>2등: 수산물 밀키트<br>3등: 상품권 5만원</p></div>
+        <div id="community" class="page">
+            <button class="btn" style="margin-bottom:15px;">+ 새 글 작성하기</button>
+            <div class="card">
+                <div class="post-title">이번 주말 출조 파티 구합니다.</div>
+                <p style="font-size:0.9rem; color:#666;">선상 낚시 같이 가실 분...</p>
+                <div class="post-meta">10분 전 · 댓글 2</div>
             </div>
-
-            <div id="view-support" class="view-section">
-                <div class="card"><h2>🎧 고객센터</h2><p>📞 010-4664-0814<br>✉️ hyunseo1458@gmail.com</p></div>
+            <div class="card">
+                <div class="post-title">폐어망 재활용 리리쉬 써보신 분?</div>
+                <p style="font-size:0.9rem; color:#666;">친환경 제품이라 관심이 가는데 내구성이 궁금하네요.</p>
+                <div class="post-meta">45분 전 · 댓글 5</div>
             </div>
         </div>
     </div>
 
-    <script>
-        // 1. Firebase 설정
-        const firebaseConfig = {
-            apiKey: "AIzaSyC8WUGKc3RfT1xgHGzgCJfeIhI-mGK9lpI",
-            authDomain: "sea-cast-fishing.firebaseapp.com",
-            projectId: "sea-cast-fishing",
-            storageBucket: "sea-cast-fishing.firebasestorage.app",
-            messagingSenderId: "729674215433",
-            appId: "1:729674215433:web:c937264195a184233688d8",
-            measurementId: "G-JXYJQSBKCB"
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home')">
+            <span class="nav-icon">🏠</span>홈
+        </div>
+        <div class="nav-item" onclick="switchTab('map')">
+            <span class="nav-icon">🗺️</span>예측지도
+        </div>
+        <div class="nav-item" onclick="switchTab('contents')">
+            <span class="nav-icon">🎣</span>콘텐츠
+        </div>
+        <div class="nav-item" onclick="switchTab('marina')">
+            <span class="nav-icon">⚓</span>마리나
+        </div>
+        <div class="nav-item" onclick="switchTab('community')">
+            <span class="nav-icon">💬</span>커뮤니티
+        </div>
+    </div>
+</div>
+
+<script>
+    // 탭 전환 스크립트
+    function switchTab(tabId) {
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        
+        const navItems = document.querySelectorAll('.nav-item');
+        const tabIndex = ['home', 'map', 'contents', 'marina', 'community'].indexOf(tabId);
+        if(tabIndex !== -1) navItems[tabIndex].classList.add('active');
+
+        const titles = {
+            'home': 'Sea Cast', 'map': '어종별 예측 지도', 'contents': '대회/콘텐츠', 'marina': '마리나/정박지', 'community': '커뮤니티 피드'
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        document.getElementById('header-title').innerText = titles[tabId];
+    }
 
-        let currentUser = null;
-        let tempImgData = null;
-        let carouselTimer = null;
-
-        // 2. 로그인 로직 (새로고침 유지 포함)
-        window.onload = function() {
-            const savedUser = localStorage.getItem('fish_user');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                enterApp();
-            }
-        };
-
-        function mockLogin() {
-            const randomID = 'id_' + Math.floor(Math.random() * 10000);
-            currentUser = { id: randomID, nick: "씨케스트조사_" + randomID.split('_')[1] };
-            localStorage.setItem('fish_user', JSON.stringify(currentUser));
-            enterApp();
+    // 예측 지도 - 어종 선택 시 채비 추천 동적 변경 스크립트
+    const gearData = {
+        'flounder': {
+            name: '광어',
+            desc: '<strong>로드:</strong> M~MH 액션의 루어대<br><strong>릴:</strong> 2500~3000번 스피닝 릴 또는 베이트 릴<br><strong>라인:</strong> 합사 1~1.2호 / 쇼크리더 4~5호<br><strong>루어:</strong> 3/8~3/4온스 지그헤드, 4~5인치 섀드웜 (붉은색/흰색 추천)'
+        },
+        'red_seabream': {
+            name: '참돔',
+            desc: '<strong>로드:</strong> 연질의 타이라바 전용 로드<br><strong>릴:</strong> 수심계가 장착된 베이트 릴 (기어비 5점대 추천)<br><strong>라인:</strong> 합사 0.8~1호 / 쇼크리더 3~4호<br><strong>루어:</strong> 40~100g 타이라바 (조류 세기에 따라 조절, 주황/초록 계열 추천)'
+        },
+        'squid': {
+            name: '무늬오징어',
+            desc: '<strong>로드:</strong> 8피트 전후의 에깅 전용 로드 (ML~M 액션)<br><strong>릴:</strong> 2500~3000번 섈로우 스풀 스피닝 릴<br><strong>라인:</strong> 합사 0.6~0.8호 / 쇼크리더 2~2.5호<br><strong>루어:</strong> 3.0~3.5호 에기 (야광, 케이무라 바디 추천)'
         }
+    };
 
-        function enterApp() {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-            updateUI();
-            listenToRankings(); // 실시간 랭킹 리스너 시작
-            listenToKing();     // 오늘의 낚시왕 리스너 시작
+    document.getElementById('fish-select').addEventListener('change', function(e) {
+        const selected = e.target.value;
+        const gearCard = document.getElementById('gear-card');
+        const heatmap = document.getElementById('heatmap-layer');
+
+        if (selected !== 'default' && gearData[selected]) {
+            document.getElementById('gear-fish-name').innerText = gearData[selected].name;
+            document.getElementById('gear-description').innerHTML = gearData[selected].desc;
+            gearCard.style.display = 'block';
+            heatmap.style.display = 'block'; // 히트맵 켜기 시뮬레이션
+            // 선택된 어종에 따라 히트맵 색상 변경 효과 (데모용)
+            if(selected === 'flounder') heatmap.style.background = 'radial-gradient(circle, rgba(50,255,50,0.7) 0%, rgba(200,255,50,0.4) 50%, transparent 100%)';
+            else if(selected === 'squid') heatmap.style.background = 'radial-gradient(circle, rgba(50,50,255,0.7) 0%, rgba(200,50,255,0.4) 50%, transparent 100%)';
+            else heatmap.style.background = 'radial-gradient(circle, rgba(255,50,50,0.7) 0%, rgba(255,200,50,0.4) 50%, transparent 100%)';
+        } else {
+            gearCard.style.display = 'none';
+            heatmap.style.display = 'none';
         }
+    });
+</script>
 
-        function logout() {
-            localStorage.removeItem('fish_user');
-            location.reload();
-        }
-
-        // 3. 서버 연동 핵심 (조과 등록)
-        async function uploadCatch() {
-            if (!tempImgData) return;
-            const btn = event.target;
-            btn.disabled = true;
-            btn.innerText = "서버 저장 중...";
-
-            try {
-                await db.collection("catches").add({
-                    userId: currentUser.id,
-                    userNick: currentUser.nick,
-                    img: tempImgData,
-                    time: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                alert("성공! 서버에 기록되었습니다.");
-                document.getElementById('preview-container').style.display = 'none';
-                document.getElementById('uploadArea').style.display = 'block';
-                tempImgData = null;
-            } catch (e) {
-                alert("저장 실패: " + e.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "서버에 조과 등록";
-            }
-        }
-
-        // 4. 실시간 데이터 리스너 (랭킹)
-        function listenToRankings() {
-            db.collection("catches").onSnapshot(snapshot => {
-                const userMap = {};
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    userMap[data.userNick] = (userMap[data.userNick] || 0) + 1;
-                });
-
-                const sorted = Object.entries(userMap).sort((a, b) => b[1] - a[1]);
-                const list = document.getElementById('leaderboard');
-                list.innerHTML = "";
-                sorted.slice(0, 5).forEach((item, i) => {
-                    list.innerHTML += `<li><div><span class="rank">${i+1}</span> ${item[0]}</div><div style="font-weight:bold;">${item[1]}마리</div></li>`;
-                });
-                
-                // 내 기록 업데이트
-                const myCount = userMap[currentUser.nick] || 0;
-                document.getElementById('my-total-count').innerText = myCount;
-            });
-        }
-
-        // 5. 오늘의 낚시왕 (가장 많이 잡은 사람의 사진들)
-        function listenToKing() {
-            db.collection("catches").onSnapshot(snapshot => {
-                const userMap = {};
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    if(!userMap[d.userNick]) userMap[d.userNick] = {count:0, imgs:[]};
-                    userMap[d.userNick].count++;
-                    userMap[d.userNick].imgs.push(d.img);
-                });
-
-                const sorted = Object.entries(userMap).sort((a,b) => b[1].count - a[1].count);
-                if(sorted.length > 0) {
-                    const king = sorted[0];
-                    document.getElementById('king-title').innerText = `👑 오늘의 낚시왕: ${king[0]} (${king[1].count}마리)`;
-                    renderCarousel(king[1].imgs);
-                }
-            });
-        }
-
-        function renderCarousel(imgs) {
-            const track = document.getElementById('carousel-track');
-            track.innerHTML = "";
-            imgs.forEach(src => track.innerHTML += `<img src="${src}">`);
-            startAutoSlide(imgs.length);
-        }
-
-        function startAutoSlide(len) {
-            if(carouselTimer) clearInterval(carouselTimer);
-            let idx = 0;
-            carouselTimer = setInterval(() => {
-                idx = (idx + 1) % len;
-                document.getElementById('carousel-track').style.transform = `translateX(-${idx * 100}%)`;
-            }, 4000);
-        }
-
-        // 6. UI 조작
-        function toggleMenu() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('sidebarOverlay').classList.toggle('open');
-        }
-
-        function changeView(view) {
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-            document.getElementById('view-' + view).classList.add('active');
-            document.getElementById('fabBack').style.display = (view === 'home') ? 'none' : 'flex';
-            toggleMenu();
-            if(view === 'record') renderMyGallery();
-        }
-
-        async function renderMyGallery() {
-            const grid = document.getElementById('my-gallery');
-            grid.innerHTML = "로딩 중...";
-            const snap = await db.collection("catches").where("userId", "==", currentUser.id).get();
-            grid.innerHTML = "";
-            snap.forEach(doc => grid.innerHTML += `<img src="${doc.data().img}">`);
-        }
-
-        function updateUI() {
-            document.getElementById('welcome-msg').innerText = `안녕하세요, ${currentUser.nick}님!`;
-            document.getElementById('sidebarUser').innerText = currentUser.nick + "님";
-            document.getElementById('p-nick').innerText = currentUser.nick;
-            document.getElementById('p-id').innerText = currentUser.id;
-        }
-
-        function editNickname() {
-            const n = prompt("변경할 닉네임:", currentUser.nick);
-            if(n) {
-                currentUser.nick = n;
-                localStorage.setItem('fish_user', JSON.stringify(currentUser));
-                updateUI();
-                alert("닉네임이 변경되었습니다. (기존 기록은 이전 닉네임으로 유지될 수 있습니다)");
-            }
-        }
-
-        function handleHeaderClick() { changeView('home'); }
-
-        // 사진 파일 처리
-        document.querySelectorAll('input[type="file"]').forEach(input => {
-            input.addEventListener('change', e => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    tempImgData = ev.target.result;
-                    document.getElementById('preview-img').src = tempImgData;
-                    document.getElementById('preview-img').style.display = 'block';
-                    document.getElementById('uploadArea').style.display = 'none';
-                    document.getElementById('preview-container').style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-    </script>
 </body>
 </html>
